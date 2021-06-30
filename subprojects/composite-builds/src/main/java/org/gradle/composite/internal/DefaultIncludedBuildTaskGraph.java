@@ -22,6 +22,7 @@ import org.gradle.api.internal.artifacts.DefaultBuildIdentifier;
 import org.gradle.internal.build.BuildStateRegistry;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 
 public class DefaultIncludedBuildTaskGraph implements IncludedBuildTaskGraph {
@@ -31,6 +32,11 @@ public class DefaultIncludedBuildTaskGraph implements IncludedBuildTaskGraph {
     public DefaultIncludedBuildTaskGraph(IncludedBuildControllers includedBuilds, BuildStateRegistry buildRegistry) {
         this.includedBuilds = includedBuilds;
         this.buildRegistry = buildRegistry;
+    }
+
+    @Override
+    public <T> T withNestedTaskGraph(Supplier<T> action) {
+        return includedBuilds.withNestedTaskGraph(action);
     }
 
     private boolean isRoot(BuildIdentifier targetBuild) {
@@ -113,5 +119,4 @@ public class DefaultIncludedBuildTaskGraph implements IncludedBuildTaskGraph {
         }
         return null;
     }
-
 }

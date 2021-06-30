@@ -20,10 +20,13 @@ import org.gradle.api.artifacts.component.BuildIdentifier;
 import org.gradle.api.internal.TaskInternal;
 import org.gradle.internal.service.scopes.Scopes;
 import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.util.Path;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+/**
+ * This should evolve to represent a build tree task graph. Currently, responsibilities are spread across this interface and {@link IncludedBuildControllers}.
+ */
 @ServiceScope(Scopes.BuildTree.class)
 public interface IncludedBuildTaskGraph {
     /**
@@ -40,4 +43,14 @@ public interface IncludedBuildTaskGraph {
      * Schedules and executes queued tasks, collecting any task failures into the given collection.
      */
     void runScheduledTasks(Consumer<? super Throwable> taskFailures);
+
+    /**
+     * Runs the given action against a new, empty task graph. This allows tasks to be run while calculating the task graph of the build tree, for example to run buildSrc tasks or
+     * to build local plugins.
+     *
+     * It would be better if this method were to create and return a "build tree task graph" object that can be populated, executed and then discarded. However, quite a few consumers
+     * of this type and {@link IncludedBuildControllers} and {@link org.gradle.execution.taskgraph.TaskExecutionGraphInternal} assume that there is a single reusable instance of
+     * these types available as services.
+     */
+    <T> T withNestedTaskGraph(Supplier<T> action);
 }

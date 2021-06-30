@@ -42,32 +42,34 @@ public class CompositeBuildClassPathInitializer implements ScriptClassPathInitia
     @Override
     public void execute(Configuration classpath) {
         ArtifactCollection artifacts = classpath.getIncoming().getArtifacts();
-        boolean found = false;
+        List<CompositeProjectComponentArtifactMetadata> localArtifacts = new ArrayList<>();
         for (ResolvedArtifactResult artifactResult : artifacts.getArtifacts()) {
-            ComponentArtifactIdentifier componentArtifactIdentifier = artifactResult.getId();
-            found |= scheduleTasks(currentBuild, componentArtifactIdentifier);
-        }
-        if (found) {
-            List<Throwable> taskFailures = new ArrayList<>();
-            includedBuildTaskGraph.runScheduledTasks(taskFailures::add);
-            if (!taskFailures.isEmpty()) {
-                throw new MultipleBuildFailures(taskFailures);
+            ComponentArtifactIdentifier artifactIdentifier = artifactResult.getId();
+            if (artifactIdentifier instanceof CompositeProjectComponentArtifactMetadata) {
+                localArtifacts.add((CompositeProjectComponentArtifactMetadata) artifactIdentifier);
             }
+        }
+        if (!localArtifacts.isEmpty()) {
+            includedBuildTaskGraph.withNestedTaskGraph(() -> {
+                for (CompositeProjectComponentArtifactMetadata artifact : localArtifacts) {
+                    scheduleTasks(currentBuild, artifact);
+                }
+                List<Throwable> taskFailures = new ArrayList<>();
+                includedBuildTaskGraph.runScheduledTasks(taskFailures::add);
+                if (!taskFailures.isEmpty()) {
+                    throw new MultipleBuildFailures(taskFailures);
+                }
+                return null;
+            });
         }
     }
 
-    public boolean scheduleTasks(BuildIdentifier requestingBuild, ComponentArtifactIdentifier artifact) {
-        boolean found = false;
-        if (artifact instanceof CompositeProjectComponentArtifactMetadata) {
-            CompositeProjectComponentArtifactMetadata compositeBuildArtifact = (CompositeProjectComponentArtifactMetadata) artifact;
-            BuildIdentifier targetBuild = compositeBuildArtifact.getComponentId().getBuild();
-            assert !requestingBuild.equals(targetBuild);
-            Set<? extends Task> tasks = compositeBuildArtifact.getBuildDependencies().getDependencies(null);
-            for (Task task : tasks) {
-                includedBuildTaskGraph.queueTaskForExecution(requestingBuild, targetBuild, (TaskInternal) task);
-            }
-            found = true;
+    public void scheduleTasks(BuildIdentifier requestingBuild, CompositeProjectComponentArtifactMetadata artifact) {
+        BuildIdentifier targetBuild = artifact.getComponentId().getBuild();
+        assert !requestingBuild.equals(targetBuild);
+        Set<? extends Task> tasks = artifact.getBuildDependencies().getDependencies(null);
+        for (Task task : tasks) {
+            includedBuildTaskGraph.queueTaskForExecution(requestingBuild, targetBuild, (TaskInternal) task);
         }
-        return found;
     }
 }
