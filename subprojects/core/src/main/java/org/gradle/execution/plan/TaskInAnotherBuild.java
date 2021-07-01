@@ -38,7 +38,7 @@ public class TaskInAnotherBuild extends TaskNode {
         IncludedBuildTaskGraph taskGraph
     ) {
         BuildIdentifier targetBuild = buildIdentifierOf(task);
-        IncludedBuildTaskResource taskResource = taskGraph.queueTaskForExecution(currentBuildId, targetBuild, task);
+        IncludedBuildTaskResource taskResource = taskGraph.locateTask(currentBuildId, targetBuild, task);
         return new TaskInAnotherBuild(task.getIdentityPath(), task.getPath(), currentBuildId, targetBuild, taskResource);
     }
 
@@ -48,7 +48,7 @@ public class TaskInAnotherBuild extends TaskNode {
         BuildIdentifier thisBuild,
         IncludedBuildTaskGraph taskGraph
     ) {
-        IncludedBuildTaskResource taskResource = taskGraph.queueTaskForExecution(thisBuild, targetBuild, taskPath);
+        IncludedBuildTaskResource taskResource = taskGraph.locateTask(thisBuild, targetBuild, taskPath);
         Path taskIdentityPath = Path.path(targetBuild.getName()).append(Path.path(taskPath));
         return new TaskInAnotherBuild(taskIdentityPath, taskPath, thisBuild, targetBuild, taskResource);
     }
@@ -88,6 +88,7 @@ public class TaskInAnotherBuild extends TaskNode {
 
     @Override
     public void prepareForExecution() {
+        target.queueForExecution();
     }
 
     @Nullable
