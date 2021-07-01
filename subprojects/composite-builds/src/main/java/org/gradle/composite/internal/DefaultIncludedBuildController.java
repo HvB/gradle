@@ -105,8 +105,22 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
         } finally {
             lock.unlock();
         }
-        includedBuild.addTasks(tasksToExecute);
+
+        includedBuild.scheduleTasks(tasksToExecute);
+
         setState(State.ReadyToRun);
+
+        lock.lock();
+        try {
+            for (Map.Entry<String, TaskState> entry : tasks.entrySet()) {
+                TaskState taskState = entry.getValue();
+                if (taskState.task == null) {
+                    taskState.task = doGetTask(entry.getKey());
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
         return true;
     }
 
@@ -115,14 +129,12 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
         lock.lock();
         try {
             assertBuildInState(State.ReadyToRun);
-            // TODO - This check should be down in the task execution plan, so that it can reuse checks that have already been performed and
+            // TODO - This check should live in the task execution plan, so that it can reuse checks that have already been performed and
             //   also check for cycles across all nodes
             Set<TaskInternal> visited = new HashSet<>();
             Set<TaskInternal> visiting = new HashSet<>();
             for (Map.Entry<String, TaskState> entry : tasks.entrySet()) {
-                TaskInternal task = doGetTask(entry.getKey());
-                entry.getValue().task = task;
-                checkForCyclesFor(task, visited, visiting);
+                checkForCyclesFor(entry.getValue().task, visited, visiting);
             }
         } finally {
             lock.unlock();
