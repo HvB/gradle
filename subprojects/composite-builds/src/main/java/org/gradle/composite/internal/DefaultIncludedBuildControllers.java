@@ -28,12 +28,13 @@ import org.gradle.internal.concurrent.Stoppable;
 import org.gradle.internal.resources.ResourceLockCoordinationService;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 class DefaultIncludedBuildControllers implements Stoppable, IncludedBuildControllers {
-    private final Map<BuildIdentifier, IncludedBuildController> buildControllers = new HashMap<>();
+    private final Map<BuildIdentifier, IncludedBuildController> buildControllers = new LinkedHashMap<>();
     private final ManagedExecutor executorService;
     private final ResourceLockCoordinationService coordinationService;
     private final ProjectStateRegistry projectStateRegistry;
@@ -48,7 +49,7 @@ class DefaultIncludedBuildControllers implements Stoppable, IncludedBuildControl
 
     @Override
     public <T> T withNestedTaskGraph(Supplier<T> action) {
-        Map<BuildIdentifier, IncludedBuildController> currentControllers = new HashMap<>(buildControllers);
+        Map<BuildIdentifier, IncludedBuildController> currentControllers = new LinkedHashMap<>(buildControllers);
         buildControllers.clear();
         T result;
         try {

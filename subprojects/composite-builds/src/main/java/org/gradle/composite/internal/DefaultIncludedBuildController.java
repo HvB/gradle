@@ -17,6 +17,7 @@
 package org.gradle.composite.internal;
 
 import org.gradle.BuildResult;
+import org.gradle.api.CircularReferenceException;
 import org.gradle.api.GradleException;
 import org.gradle.api.Task;
 import org.gradle.api.execution.TaskExecutionGraph;
@@ -35,6 +36,8 @@ import org.gradle.internal.InternalListener;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.build.IncludedBuildState;
 import org.gradle.internal.concurrent.Stoppable;
+import org.gradle.internal.graph.DirectedGraphRenderer;
+import org.gradle.internal.logging.text.StyledTextOutput;
 import org.gradle.internal.operations.BuildOperationRef;
 import org.gradle.internal.operations.CurrentBuildOperationRef;
 import org.gradle.internal.resources.ResourceLockCoordinationService;
@@ -42,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -148,17 +152,29 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
         }
         if (!visiting.add(task)) {
             // Visiting dependencies -> have found a cycle
-            throw new IllegalStateException("task cycle including " + visiting);
+            DirectedGraphRenderer<TaskInternal> graphRenderer = new DirectedGraphRenderer<>(
+                (node, output) -> output.withStyle(StyledTextOutput.Style.Identifier).text(node.getIdentityPath()),
+                (node, values, connectedNodes) -> {
+                    visitDependenciesOf(node, connectedNodes::add);
+                }
+            );
+            StringWriter writer = new StringWriter();
+            graphRenderer.renderTo(task, writer);
+            throw new CircularReferenceException(String.format("Circular dependency between the following tasks:%n%s", writer.toString()));
         }
+        visitDependenciesOf(task, dep -> checkForCyclesFor(dep, visited, visiting));
+        visiting.remove(task);
+        visited.add(task);
+    }
+
+    private void visitDependenciesOf(TaskInternal task, Consumer<TaskInternal> consumer) {
         TaskNodeFactory taskNodeFactory = ((GradleInternal) task.getProject().getGradle()).getServices().get(TaskNodeFactory.class);
         TaskNode node = taskNodeFactory.getOrCreateNode(task);
         for (Node dependency : node.getAllSuccessors()) {
             if (dependency instanceof TaskNode) {
-                checkForCyclesFor(((TaskNode) dependency).getTask(), visited, visiting);
+                consumer.accept(((TaskNode) dependency).getTask());
             }
         }
-        visiting.remove(task);
-        visited.add(task);
     }
 
     @Override
