@@ -120,7 +120,8 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
             Set<TaskInternal> visited = new HashSet<>();
             Set<TaskInternal> visiting = new HashSet<>();
             for (Map.Entry<String, TaskState> entry : tasks.entrySet()) {
-                TaskInternal task = getTask(entry.getKey());
+                TaskInternal task = doGetTask(entry.getKey());
+                entry.getValue().task = task;
                 checkForCyclesFor(task, visited, visiting);
             }
         } finally {
@@ -186,8 +187,7 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
         });
     }
 
-    @Override
-    public TaskInternal getTask(String taskPath) {
+    private TaskInternal doGetTask(String taskPath) {
         for (Task task : getTaskGraph().getAllTasks()) {
             if (task.getPath().equals(taskPath)) {
                 return (TaskInternal) task;
@@ -236,9 +236,11 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
         try {
             Set<String> tasksToExecute = new LinkedHashSet<>();
             for (Map.Entry<String, TaskState> taskEntry : tasks.entrySet()) {
-                if (taskEntry.getValue().status == TaskStatus.QUEUED) {
-                    tasksToExecute.add(taskEntry.getKey());
-                    taskEntry.getValue().status = TaskStatus.EXECUTING;
+                TaskState taskState = taskEntry.getValue();
+                if (taskState.status == TaskStatus.QUEUED) {
+                    String taskPath = taskEntry.getKey();
+                    tasksToExecute.add(taskPath);
+                    taskState.status = TaskStatus.EXECUTING;
                 }
             }
             return tasksToExecute;
@@ -294,8 +296,12 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
             for (String task : tasksExecuted) {
                 TaskState taskState = tasks.get(task);
                 if (taskState.status == TaskStatus.EXECUTING) {
-                    taskState.status = TaskStatus.FAILED;
-                    someTasksNotCompleted = true;
+                    if (taskState.task.getState().getExecuted()) {
+                        taskState.status = TaskStatus.SUCCESS;
+                    } else {
+                        taskState.status = TaskStatus.FAILED;
+                        someTasksNotCompleted = true;
+                    }
                 }
             }
             if (failure != null) {
@@ -350,6 +356,23 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
         }
     }
 
+    @Override
+    public TaskInternal getTask(String taskPath) {
+        lock.lock();
+        try {
+            TaskState state = tasks.get(taskPath);
+            if (state == null) {
+                throw includedBuildTaskWasNeverScheduled(taskPath);
+            }
+            if (state.task == null) {
+                throw new IllegalStateException();
+            }
+            return state.task;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private IllegalStateException includedBuildTaskWasNeverScheduled(String taskPath) {
         return new IllegalStateException("Included build task '" + taskPath + "' was never scheduled for execution.");
     }
@@ -359,6 +382,7 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
     private static class TaskState {
         public BuildResult result;
         public TaskStatus status = TaskStatus.QUEUED;
+        public TaskInternal task;
     }
 
     private class BuildOpRunnable implements Runnable {
