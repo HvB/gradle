@@ -200,11 +200,11 @@ class CompositeBuildOperationsIntegrationTest extends AbstractCompositeBuildInte
 
         def taskGraphOps = operations.all(CalculateTaskGraphBuildOperationType)
         taskGraphOps.size() == 3
-        taskGraphOps[0].displayName == "Calculate task graph (:buildC)"
-        taskGraphOps[0].details.buildPath == ":buildC"
+        taskGraphOps[0].displayName == "Calculate task graph (:buildB)"
+        taskGraphOps[0].details.buildPath == ":buildB"
         taskGraphOps[0].parentId == applyRootProjectBuildScript.id
-        taskGraphOps[1].displayName == "Calculate task graph (:buildB)"
-        taskGraphOps[1].details.buildPath == ":buildB"
+        taskGraphOps[1].displayName == "Calculate task graph (:buildC)"
+        taskGraphOps[1].details.buildPath == ":buildC"
         taskGraphOps[1].parentId == applyRootProjectBuildScript.id
         taskGraphOps[2].displayName == "Calculate task graph"
         taskGraphOps[2].details.buildPath == ":"
