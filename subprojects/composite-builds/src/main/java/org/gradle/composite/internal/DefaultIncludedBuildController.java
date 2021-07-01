@@ -21,10 +21,14 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Task;
 import org.gradle.api.execution.TaskExecutionGraph;
 import org.gradle.api.execution.TaskExecutionGraphListener;
+import org.gradle.api.internal.GradleInternal;
 import org.gradle.api.internal.TaskInternal;
 import org.gradle.api.internal.project.ProjectStateRegistry;
 import org.gradle.api.internal.project.taskfactory.TaskIdentity;
 import org.gradle.execution.MultipleBuildFailures;
+import org.gradle.execution.plan.Node;
+import org.gradle.execution.plan.TaskNode;
+import org.gradle.execution.plan.TaskNodeFactory;
 import org.gradle.execution.taskgraph.TaskExecutionGraphInternal;
 import org.gradle.execution.taskgraph.TaskListenerInternal;
 import org.gradle.internal.InternalListener;
@@ -104,6 +108,44 @@ class DefaultIncludedBuildController implements Stoppable, IncludedBuildControll
         includedBuild.addTasks(tasksToExecute);
         setState(State.ReadyToRun);
         return true;
+    }
+
+    @Override
+    public void validateTaskGraph() {
+        lock.lock();
+        try {
+            assertBuildInState(State.ReadyToRun);
+            // TODO - This check should be down in the task execution plan, so that it can reuse checks that have already been performed and
+            //   also check for cycles across all nodes
+            Set<TaskInternal> visited = new HashSet<>();
+            Set<TaskInternal> visiting = new HashSet<>();
+            for (Map.Entry<String, TaskState> entry : tasks.entrySet()) {
+                TaskInternal task = getTask(entry.getKey());
+                checkForCyclesFor(task, visited, visiting);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void checkForCyclesFor(TaskInternal task, Set<TaskInternal> visited, Set<TaskInternal> visiting) {
+        if (visited.contains(task)) {
+            // Already checked
+            return;
+        }
+        if (!visiting.add(task)) {
+            // Visiting dependencies -> have found a cycle
+            throw new IllegalStateException("task cycle including " + visiting);
+        }
+        TaskNodeFactory taskNodeFactory = ((GradleInternal) task.getProject().getGradle()).getServices().get(TaskNodeFactory.class);
+        TaskNode node = taskNodeFactory.getOrCreateNode(task);
+        for (Node dependency : node.getAllSuccessors()) {
+            if (dependency instanceof TaskNode) {
+                checkForCyclesFor(((TaskNode) dependency).getTask(), visited, visiting);
+            }
+        }
+        visiting.remove(task);
+        visited.add(task);
     }
 
     @Override

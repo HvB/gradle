@@ -91,6 +91,9 @@ class DefaultIncludedBuildControllers implements Stoppable, IncludedBuildControl
                 }
             }
         }
+        for (IncludedBuildController buildController : buildControllers.values()) {
+            buildController.validateTaskGraph();
+        }
     }
 
     @Override
