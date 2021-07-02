@@ -23,6 +23,8 @@ import org.gradle.plugins.ide.api.XmlFileContentMerger;
 import org.gradle.util.internal.ConfigureUtil;
 
 import javax.inject.Inject;
+
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -143,11 +145,18 @@ public class EclipseWtpFacet {
      */
     public void facet(Map<String, ?> args) {
         Facet newFacet = ConfigureUtil.configureByMap(args, new Facet());
+        List<Facet> newFacets;
+        if ("jst.ejb".equals(newFacet.getName())) {
+            newFacets = Arrays.asList(new Facet(Facet.FacetType.fixed, "jst.ejb", null), newFacet);
+        } else {
+            newFacets = Collections.singletonList(newFacet);
+        }
         facets = Lists.newArrayList(Iterables.concat(
             getFacets().stream()
                        .filter(f -> f.getType() != newFacet.getType() || !Objects.equals(f.getName(), newFacet.getName()))
+                       .filter(f -> !"jst.ejb".equals(newFacet.getName()) || !"jst.utility".equals(f.getName()))
                        .collect(Collectors.toList()),
-            Collections.singleton(newFacet)));
+            newFacets));
     }
 
     @SuppressWarnings("unchecked")
