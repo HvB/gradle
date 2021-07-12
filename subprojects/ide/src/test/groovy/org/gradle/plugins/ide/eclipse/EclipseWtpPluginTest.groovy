@@ -298,6 +298,7 @@ class EclipseWtpPluginTest extends AbstractProjectBuilderSpec {
                 new Facet(FacetType.installed, "jst.java", "1.4")])
     }
 
+    @Issue('gradle/gradle#17681')
     def "add 'jst.ejb' facet should remove incompatible 'jst.utility' facet"() {
         when:
         project.apply(plugin: 'java')
@@ -318,7 +319,7 @@ class EclipseWtpPluginTest extends AbstractProjectBuilderSpec {
                 new Facet(FacetType.installed, "jst.java", "1.8")])
     }
 
-    @Issue(['GRADLE-2186', 'GRADLE-2221'])
+    @Issue(['GRADLE-2186', 'GRADLE-2221', 'gradle/gradle#17681'])
     def "can change WTP components and add facets when java plugin is applied"() {
         when:
         project.apply(plugin: 'java')
