@@ -139,6 +139,8 @@ public class EclipseWtpFacet {
      * <p>
      * If a facet already exists with the given name then its version will be updated.
      * <p>
+     * In the case of a "jst.ejb" facet, the incompatible "jst.utility" installed by default is also removed.
+     * </p>
      * For examples see docs for {@link EclipseWtpFacet}
      *
      * @param args A map that must contain a 'name' and 'version' key with corresponding values.
