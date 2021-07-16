@@ -31,6 +31,34 @@ class EclipsePluginTest extends AbstractProjectBuilderSpec {
         eclipsePlugin = project.objects.newInstance(EclipsePlugin)
     }
 
+    def "can configure project encoding"() {
+        when:
+        eclipsePlugin.apply(project)
+        project.eclipse {
+            encoding {
+                projectEncoding encoding: 'UTF-8'
+            }
+        }
+
+        then:
+        project.eclipse.encoding.encodings['encodings/<project>'] == 'UTF-8'
+    }
+
+    def "can configure resource encoding"() {
+        when:
+        eclipsePlugin.apply(project)
+        project.eclipse {
+            encoding {
+                resourceEncoding resource: 'src', encoding: 'UTF-8'
+                projectEncoding encoding: 'UTF-16'
+            }
+        }
+
+        then:
+        project.eclipse.encoding.encodings['encodings/src'] != null
+        project.eclipse.encoding.encodings['encodings/<project>'] == 'UTF-16'
+    }
+
     def applyToBaseProject_shouldOnlyHaveEclipseProjectTask() {
         when:
         eclipsePlugin.apply(project)

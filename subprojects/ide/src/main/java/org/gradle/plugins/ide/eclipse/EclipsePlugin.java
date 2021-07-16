@@ -80,6 +80,7 @@ public class EclipsePlugin extends IdePlugin {
     public static final String ECLIPSE_PROJECT_TASK_NAME = "eclipseProject";
     public static final String ECLIPSE_CP_TASK_NAME = "eclipseClasspath";
     public static final String ECLIPSE_JDT_TASK_NAME = "eclipseJdt";
+    public static final String ECLIPSE_RESOURCE_ENCODING_TASK_NAME = "eclipseResourceEncoding";
 
     private final UniqueProjectNameProvider uniqueProjectNameProvider;
     private final IdeArtifactRegistry artifactRegistry;
@@ -107,6 +108,7 @@ public class EclipsePlugin extends IdePlugin {
         EclipseModel model = project.getExtensions().create("eclipse", EclipseModel.class, project);
 
         configureEclipseProject((ProjectInternal) project, model);
+        configureEclipseResourcesEncoding(project, model);
         configureEclipseJdt(project, model);
         configureEclipseClasspath(project, model);
 
@@ -361,6 +363,19 @@ public class EclipsePlugin extends IdePlugin {
                 });
             }
         });
+    }
+    
+    private void configureEclipseResourcesEncoding(final Project project, final EclipseModel eclipseModel) {
+        TaskProvider<GenerateEclipseResourceEncoding> task = project.getTasks().register(ECLIPSE_RESOURCE_ENCODING_TASK_NAME, GenerateEclipseResourceEncoding.class, eclipseModel.getEncoding());
+        task.configure(new Action<GenerateEclipseResourceEncoding>() {
+            @Override
+            public void execute(final GenerateEclipseResourceEncoding task) {
+                task.setDescription("Generates the Eclipse ressource encoding settings file.");
+                task.setInputFile(project.file(".settings/org.eclipse.core.resources.prefs"));
+                task.setOutputFile(project.file(".settings/org.eclipse.core.resources.prefs"));
+            }
+        });
+        addWorker(task, ECLIPSE_RESOURCE_ENCODING_TASK_NAME);
     }
 
     private static String eclipseJavaRuntimeNameFor(JavaVersion version) {

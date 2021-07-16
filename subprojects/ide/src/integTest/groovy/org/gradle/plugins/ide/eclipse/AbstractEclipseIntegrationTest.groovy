@@ -42,6 +42,10 @@ class AbstractEclipseIntegrationTest extends AbstractIdeIntegrationTest {
         getFile(options, ".settings/org.eclipse.jdt.core.prefs")
     }
 
+    protected File getResourceEncodingPropertiesFile(Map options) {
+        getFile(options, ".settings/org.eclipse.core.resources.prefs")
+    }
+
     protected parseProjectFile(Map options) {
         parseFile(options, ".project")
     }

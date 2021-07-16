@@ -49,6 +49,7 @@ class EclipseIntegrationTest extends AbstractEclipseIntegrationTest {
         assertHasExpectedContents(getComponentFile(project:"api"), "apiWtpComponent.xml")
         assertHasExpectedContents(getFacetFile(project:"api"), "apiWtpFacet.xml")
         assertHasExpectedProperties(getJdtPropertiesFile(project:"api"), "apiJdt.properties")
+        assertHasExpectedProperties(getResourceEncodingPropertiesFile(project:"api"), "apiResourceEncoding.properties")
 
         assertHasExpectedContents(getClasspathFile(project:"common"), "commonClasspath.xml")
         assertHasExpectedContents(getProjectFile(project:"common"), "commonProject.xml")
@@ -258,12 +259,19 @@ eclipse {
             whenMerged {whenConfiguredObjects++ }
         }
     }
+
+    encoding {
+        file {
+            beforeMerged {beforeConfiguredObjects++ }
+            whenMerged {whenConfiguredObjects++ }
+        }
+    }
 }
 
 tasks.eclipse {
     doLast {
-        assert beforeConfiguredObjects == 5 : "beforeConfigured() hooks should be fired for domain model objects"
-        assert whenConfiguredObjects == 5 : "whenConfigured() hooks should be fired for domain model objects"
+        assert beforeConfiguredObjects == 6 : "beforeConfigured() hooks should be fired for domain model objects"
+        assert whenConfiguredObjects == 6 : "whenConfigured() hooks should be fired for domain model objects"
     }
 }
 ''')

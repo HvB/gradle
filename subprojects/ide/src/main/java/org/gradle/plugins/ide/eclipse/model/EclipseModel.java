@@ -21,11 +21,14 @@ import groovy.lang.Closure;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.api.internal.PropertiesTransformer;
 import org.gradle.api.internal.tasks.DefaultTaskDependency;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.TaskDependency;
 import org.gradle.internal.xml.XmlTransformer;
+import org.gradle.plugins.ide.api.PropertiesFileContentMerger;
 import org.gradle.plugins.ide.api.XmlFileContentMerger;
+
 
 import javax.inject.Inject;
 import java.io.File;
@@ -72,6 +75,8 @@ public class EclipseModel {
     private EclipseJdt jdt;
 
     private EclipseWtp wtp;
+
+    private EclipseResourceEncoding encoding;
 
     private final DefaultTaskDependency synchronizationTasks;
 
@@ -182,6 +187,17 @@ public class EclipseModel {
         action.execute(getProject());
     }
 
+    public EclipseResourceEncoding getEncoding(){
+        if (encoding == null) {
+            encoding = getObjectFactory().newInstance(EclipseResourceEncoding.class, new PropertiesFileContentMerger(new PropertiesTransformer()));
+        }
+        return encoding;
+    }
+
+    public void setEncoding(EclipseResourceEncoding encoding){
+        this.encoding = encoding;
+    }
+
     /**
      * Configures eclipse classpath information
      * <p>
@@ -240,6 +256,14 @@ public class EclipseModel {
      */
     public void jdt(Action<? super EclipseJdt> action) {
         action.execute(getJdt());
+    }
+
+    public void encoding(Closure closure) {
+        configure(closure, getEncoding());
+    }
+
+    public void encoding(Action<? super EclipseResourceEncoding> action) {
+        action.execute(getEncoding());
     }
 
     /**

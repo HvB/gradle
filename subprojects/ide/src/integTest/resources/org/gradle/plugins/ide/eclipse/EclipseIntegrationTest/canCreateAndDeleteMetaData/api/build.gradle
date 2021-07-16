@@ -16,3 +16,8 @@ sourceSets {
         java.srcDir 'src/test/t_e_s_t'
     }
 }
+
+eclipse.encoding {
+    resourceEncoding resource: 'src', encoding: 'UTF-8'
+    projectEncoding encoding: 'cp1252'
+}
