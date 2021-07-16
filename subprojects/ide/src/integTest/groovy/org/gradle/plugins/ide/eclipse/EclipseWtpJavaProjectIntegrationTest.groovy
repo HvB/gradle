@@ -58,7 +58,7 @@ class EclipseWtpJavaProjectIntegrationTest extends AbstractEclipseIntegrationSpe
 
         // Facets
         def facets = wtpFacets
-        facets.assertHasFixedFacets("jst.java")
+        facets.assertHasFixedFacets("jst.java", "jst.utility")
         facets.assertHasInstalledFacets("jst.utility", "jst.java")
         facets.assertFacetVersion("jst.utility", "1.0")
         facets.assertFacetVersion("jst.java", "6.0")

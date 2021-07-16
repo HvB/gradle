@@ -88,7 +88,7 @@ class EclipseWtpWebAndJavaProjectIntegrationTest extends AbstractEclipseIntegrat
 
         // Facets
         def javaFacets = wtpFacets('java')
-        javaFacets.assertHasFixedFacets("jst.java")
+        javaFacets.assertHasFixedFacets("jst.java", "jst.utility")
         javaFacets.assertHasInstalledFacets("jst.utility", "jst.java")
 
         def webFacets = wtpFacets('web')
