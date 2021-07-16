@@ -56,6 +56,26 @@ class EclipseWtpPluginTest extends AbstractProjectBuilderSpec {
         project.tasks.cleanEclipse.taskDependencies.getDependencies(null).contains(project.cleanEclipseWtp)
     }
 
+    @Issue('gradle/issues/xxxx')
+    def applyToJavaProject_shouldHaveJstUtilityFacet() {
+        when:
+        project.apply(plugin: 'java')
+        project.sourceCompatibility = 1.8
+        wtpPlugin.apply(project)
+
+        then:
+        [project.tasks.cleanEclipseWtpComponent, project.tasks.cleanEclipseWtpFacet].each {
+            assert project.tasks.cleanEclipseWtp.dependsOn*.get().contains(it)
+        }
+        checkEclipseClasspath([project.configurations.compileClasspath, project.configurations.runtimeClasspath, project.configurations.testCompileClasspath, project.configurations.testRuntimeClasspath])
+        checkEclipseWtpComponentForJava()
+        checkEclipseWtpFacet([
+                new Facet(FacetType.fixed, 'jst.java', null),
+                new Facet(FacetType.fixed, 'jst.utility', null),
+                new Facet(FacetType.installed, 'jst.utility', '1.0'),
+                new Facet(FacetType.installed, 'jst.java', '1.8')])
+    }
+
     def applyToJavaProject_shouldHaveWebProjectAndClasspathTask() {
         when:
         project.apply(plugin: 'java')
@@ -70,6 +90,7 @@ class EclipseWtpPluginTest extends AbstractProjectBuilderSpec {
         checkEclipseWtpComponentForJava()
         checkEclipseWtpFacet([
                 new Facet(FacetType.fixed, 'jst.java', null),
+                new Facet(FacetType.fixed, 'jst.utility', null),
                 new Facet(FacetType.installed, 'jst.utility', '1.0'),
                 new Facet(FacetType.installed, 'jst.java', '6.0')])
     }
@@ -88,6 +109,7 @@ class EclipseWtpPluginTest extends AbstractProjectBuilderSpec {
         checkEclipseWtpComponentForJava()
         checkEclipseWtpFacet([
                 new Facet(FacetType.fixed, 'jst.java', null),
+                new Facet(FacetType.fixed, 'jst.utility', null),
                 new Facet(FacetType.installed, 'jst.utility', '1.0'),
                 new Facet(FacetType.installed, 'jst.java', '1.7')])
     }
@@ -107,6 +129,7 @@ class EclipseWtpPluginTest extends AbstractProjectBuilderSpec {
         then:
         checkEclipseWtpFacet([
                 new Facet(FacetType.fixed, 'jst.java', null),
+                new Facet(FacetType.fixed, 'jst.utility', null),
                 new Facet(FacetType.installed, 'jst.utility', '1.0'),
                 new Facet(FacetType.installed, 'jst.java', '1.3'),
                 new Facet(FacetType.installed, 'someCoolFacet', '1.3')])

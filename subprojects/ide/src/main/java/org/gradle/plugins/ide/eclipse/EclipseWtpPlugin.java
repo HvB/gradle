@@ -285,6 +285,7 @@ public class EclipseWtpPlugin extends IdePlugin {
                     public List<Facet> call() throws Exception {
                         return Lists.newArrayList(
                             new Facet(Facet.FacetType.fixed, "jst.java", null),
+                            new Facet(Facet.FacetType.fixed, "jst.utility", null),
                             new Facet(Facet.FacetType.installed, "jst.utility", "1.0"),
                             new Facet(Facet.FacetType.installed, "jst.java", toJavaFacetVersion(project.getExtensions().getByType(JavaPluginExtension.class).getSourceCompatibility()))
                         );
