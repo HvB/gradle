@@ -19,14 +19,25 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
+import org.gradle.api.Project;
+import org.gradle.api.file.ProjectLayout;
+import org.gradle.api.plugins.JavaPlugin;
+import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.ProviderFactory;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.plugins.ide.api.PropertiesFileContentMerger;
 import org.gradle.plugins.ide.api.XmlFileContentMerger;
 import org.gradle.util.internal.ConfigureUtil;
 
 import javax.inject.Inject;
 
+import java.io.File;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,11 +90,15 @@ import static org.gradle.util.internal.ConfigureUtil.configure;
 public class EclipseResourceEncoding{
 
     private final PropertiesFileContentMerger file;
-    private Properties encodings = new Properties();
+    private Map<String, String> encodings = new LinkedHashMap<>();
+    private Map<String, String> defaultEncodings = new LinkedHashMap<>();
+    private Project project;
+    private ProjectLayout layout;
 
     @Inject
-    public EclipseResourceEncoding(PropertiesFileContentMerger file) {
+    public EclipseResourceEncoding(PropertiesFileContentMerger file, Project project) {
         this.file = file;
+        this.project = project;
     }
 
     /**
@@ -119,43 +134,69 @@ public class EclipseResourceEncoding{
         action.execute(file);
     }
 
-    /**
-     * The facets to be added as elements.
-     * <p>
-     * For examples see docs for {@link EclipseResourceEncoding}
-     */
-    public Properties getEncodings() {
-        return encodings;
+    public Map<String, String> getEncodings() {
+        Map<String, String> combinedEncodings = new LinkedHashMap<>(this.getDefaultEncodings());
+        combinedEncodings.putAll(this.encodings);
+        return combinedEncodings;
     }
 
-    public void setEncodings(Properties encodings) {
+    public String getProperty(String key) {
+        return this.getEncodings().get(key);
+    }
+
+    public void setEncodings(Map<String, String> encodings) {
         this.encodings = encodings;
     }
 
-    /**
-     * Adds a facet.
-     * <p>
-     * If a facet already exists with the given name then its version will be updated.
-     * <p>
-     * In the case of a "jst.ejb" facet, the incompatible "jst.utility" installed by default is also removed.
-     * </p>
-     * For examples see docs for {@link EclipseResourceEncoding}
-     *
-     * @param args A map that must contain a 'name' and 'version' key with corresponding values.
-     */
+    public Map<String, String> getDefaultEncodings() {
+        return this.defaultEncodings;
+    }
+
+    public void setDefaultEncodings(Map<String, String> encodings) {
+        this.defaultEncodings = encodings;
+    }
+
+    protected Project getProject() {
+        return project;
+    }
+
+    @Inject
+    protected ProjectLayout getLayout() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Inject
+    protected ProviderFactory getProviderFactory() {
+        throw new UnsupportedOperationException();
+    }
+
     public void resourceEncoding(Map<String, String> args) {
-        encodings.setProperty("encodings/" + args.getOrDefault("resource", "<project>"), args.get("encoding"));
+        resourceEncoding(args.get("resource"), args.get("encoding"));
+    }
+
+    public void resourceEncoding(String path, String encoding) {
+        String key = "encoding/<project>";
+        if (path != null && !"<project>".equals(path)) {
+            key = "encoding//" + path.replaceFirst("^/*", "").replaceFirst("/*$", "");
+        }
+        encodings.put(key, encoding);
     }
 
     public void projectEncoding(Map<String, String> args) {
-        encodings.setProperty("encodings/<project>", args.get("encoding"));
+        projectEncoding(args.get("encoding"));
+    }
+
+    public void projectEncoding(String encoding) {
+        resourceEncoding(null, encoding);
     }
 
     @SuppressWarnings("unchecked")
     public void mergeEncodings(Encoding encodingPref) {
         file.getBeforeMerged().execute(encodingPref);
+
         encodingPref.configure(getEncodings());
+
         file.getWhenMerged().execute(encodingPref);
     }
-    
+
 }

@@ -18,6 +18,7 @@ sourceSets {
 }
 
 eclipse.encoding {
-    resourceEncoding resource: 'src', encoding: 'UTF-8'
     projectEncoding encoding: 'cp1252'
+    resourceEncoding resource: 'src/main/testbutnottest'
 }
+compileJava.options.encoding = 'UTF-8'

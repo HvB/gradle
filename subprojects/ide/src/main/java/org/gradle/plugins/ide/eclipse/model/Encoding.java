@@ -15,6 +15,8 @@
  */
 package org.gradle.plugins.ide.eclipse.model;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import org.gradle.api.internal.PropertiesTransformer;
@@ -26,13 +28,12 @@ import org.gradle.plugins.ide.internal.generator.PropertiesPersistableConfigurat
  */
 public class Encoding extends PropertiesPersistableConfigurationObject {
 
-    private Properties encodings;
+    private Map<String, String> props;
 
     public Encoding(PropertiesTransformer transformer) {
         super(transformer);
-        Properties defaults = new Properties();
-        defaults.put("eclipse.preferences.version", "1");
-        encodings = new Properties(defaults);
+        props = new LinkedHashMap<>();
+        props.put("eclipse.preferences.version", "1");
     }
 
     @Override
@@ -42,15 +43,14 @@ public class Encoding extends PropertiesPersistableConfigurationObject {
 
     @Override
     protected void load(Properties properties) {
-        //encodings.addAll(properties);
     }
 
     @Override
     protected void store(Properties properties) {
-        properties.putAll(encodings);
+        props.forEach((k, v) -> { if (v == null) properties.remove(k); else properties.setProperty(k, v);});
     }
 
-    public void configure(Properties properties){
-        encodings.putAll(properties);
+    public void configure(Map<String, String> encodings){
+        props.putAll(encodings);
     }
 }

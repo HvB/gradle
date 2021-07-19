@@ -20,8 +20,11 @@ package org.gradle.plugins.ide.eclipse
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.plugins.ide.eclipse.model.BuildCommand
 import org.gradle.test.fixtures.AbstractProjectBuilderSpec
+import java.util.Properties
+import spock.util.environment.RestoreSystemProperties
 
 class EclipsePluginTest extends AbstractProjectBuilderSpec {
 
@@ -36,27 +39,125 @@ class EclipsePluginTest extends AbstractProjectBuilderSpec {
         eclipsePlugin.apply(project)
         project.eclipse {
             encoding {
-                projectEncoding encoding: 'UTF-8'
-            }
-        }
-
-        then:
-        project.eclipse.encoding.encodings['encodings/<project>'] == 'UTF-8'
-    }
-
-    def "can configure resource encoding"() {
-        when:
-        eclipsePlugin.apply(project)
-        project.eclipse {
-            encoding {
-                resourceEncoding resource: 'src', encoding: 'UTF-8'
                 projectEncoding encoding: 'UTF-16'
             }
         }
 
         then:
-        project.eclipse.encoding.encodings['encodings/src'] != null
-        project.eclipse.encoding.encodings['encodings/<project>'] == 'UTF-16'
+        project.eclipse.encoding.encodings['encoding/<project>'] == 'UTF-16'
+    }
+
+    def "by default project encoding is defined with system 'file.encoding' property"() {
+        when:
+        eclipsePlugin.apply(project)
+        project.apply(plugin: 'java')
+        project.eclipse {
+            encoding {
+                resourceEncoding resource: 'src/main/java', encoding: 'UTF-8'
+            }
+        }
+
+        then:
+        project.eclipse.encoding.encodings['encoding/<project>'] == System.properties.getProperty('file.encoding')
+    }
+
+    @RestoreSystemProperties
+    def "can configure project encoding with system 'file.encoding' property"() {
+        setup:
+        System.properties.setProperty('file.encoding', charset)
+
+        when:
+        eclipsePlugin.apply(project)
+        project.apply(plugin: 'java')
+        project.eclipse {
+            encoding {
+                resourceEncoding resource: 'src/main/java', encoding: 'UTF-8'
+            }
+        }
+
+        then:
+        project.eclipse.encoding.encodings['encoding//src/main/java'] == 'UTF-8'
+        project.eclipse.encoding.encodings['encoding/<project>'] == System.properties.getProperty('file.encoding')
+        project.eclipse.encoding.encodings['encoding/<project>'] == charset
+
+        where:
+        charset << ['cp1252', 'Cp870', 'ISO-8859-1']
+    }
+
+    def "can configure resource encoding explicitely"() {
+        when:
+        eclipsePlugin.apply(project)
+        project.apply(plugin: 'java')
+        project.eclipse {
+            encoding {
+                projectEncoding encoding: charset1
+                resourceEncoding resource: 'src/main/java', encoding: charset2
+            }
+        }
+
+        then:
+        project.eclipse.encoding.encodings['encoding/<project>'] == charset1
+        project.eclipse.encoding.encodings['encoding//src/main/java'] == charset2
+
+        where:
+        charset1 << ['cp1252', 'Cp870', null, 'ISO-8859-1']
+        charset2 << ['Cp870', null, 'cp1252', 'ISO-8859-1']
+    }
+
+
+    def "can configure resource encoding using main JavaCompile task"() {
+        when:
+        eclipsePlugin.apply(project)
+        project.apply(plugin: 'java')
+        project.eclipse {
+            encoding {
+                projectEncoding encoding: 'UTF-16'
+            }
+        }
+        project.compileJava.options.encoding = 'UTF-8'
+
+        then:
+        project.eclipse.encoding.encodings['encoding//src/main/java'] == 'UTF-8'
+        project.eclipse.encoding.encodings['encoding//src/test/java'] == null
+        project.eclipse.encoding.encodings['encoding/<project>'] == 'UTF-16'
+    }
+
+    def "can configure resource encoding using test JavaCompile task"() {
+        when:
+        eclipsePlugin.apply(project)
+        project.apply(plugin: 'java')
+        project.eclipse {
+            encoding {
+                projectEncoding encoding: 'UTF-16'
+            }
+        }
+        project.compileTestJava.options.encoding = 'UTF-8'
+
+        then:
+        project.eclipse.encoding.encodings['encoding//src/main/java'] == null
+        project.eclipse.encoding.encodings['encoding//src/test/java'] == 'UTF-8'
+        project.eclipse.encoding.encodings['encoding/<project>'] == 'UTF-16'
+    }
+
+    def "explicit encoding take precedence over implicit encoding"() {
+        when:
+        eclipsePlugin.apply(project)
+        project.apply(plugin: 'java')
+        project.eclipse {
+            encoding {
+                projectEncoding encoding: 'UTF-16'
+                resourceEncoding resource: 'src/main/java', encoding: charset
+            }
+        }
+        project.tasks.withType(JavaCompile){ options.encoding = 'UTF-8' }
+
+        then:
+        project.eclipse.encoding.encodings['encoding//src/main/java'] == charset
+        project.eclipse.encoding.encodings['encoding//src/test/java'] == 'UTF-8'
+        project.eclipse.encoding.encodings['encoding/<project>'] == 'UTF-16'
+        
+        where:
+        charset << ['cp1252', 'Cp870', 'ISO-8859-1', null]
     }
 
     def applyToBaseProject_shouldOnlyHaveEclipseProjectTask() {

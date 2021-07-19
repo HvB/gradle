@@ -43,6 +43,7 @@ import org.gradle.api.plugins.scala.ScalaBasePlugin;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
+import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.internal.xml.XmlTransformer;
 import org.gradle.plugins.ear.EarPlugin;
 import org.gradle.plugins.ide.api.PropertiesFileContentMerger;
@@ -56,6 +57,7 @@ import org.gradle.plugins.ide.eclipse.model.EclipseClasspath;
 import org.gradle.plugins.ide.eclipse.model.EclipseJdt;
 import org.gradle.plugins.ide.eclipse.model.EclipseModel;
 import org.gradle.plugins.ide.eclipse.model.EclipseProject;
+import org.gradle.plugins.ide.eclipse.model.EclipseResourceEncoding;
 import org.gradle.plugins.ide.eclipse.model.Link;
 import org.gradle.plugins.ide.eclipse.model.internal.EclipseJavaVersionMapper;
 import org.gradle.plugins.ide.internal.IdeArtifactRegistry;
@@ -65,7 +67,10 @@ import org.gradle.plugins.ide.internal.configurer.UniqueProjectNameProvider;
 import javax.inject.Inject;
 import java.io.File;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -364,8 +369,9 @@ public class EclipsePlugin extends IdePlugin {
             }
         });
     }
-    
+
     private void configureEclipseResourcesEncoding(final Project project, final EclipseModel eclipseModel) {
+        eclipseModel.setEncoding(project.getObjects().newInstance(EclipseResourceEncoding.class, new PropertiesFileContentMerger(new PropertiesTransformer()), project));
         TaskProvider<GenerateEclipseResourceEncoding> task = project.getTasks().register(ECLIPSE_RESOURCE_ENCODING_TASK_NAME, GenerateEclipseResourceEncoding.class, eclipseModel.getEncoding());
         task.configure(new Action<GenerateEclipseResourceEncoding>() {
             @Override
@@ -376,6 +382,47 @@ public class EclipsePlugin extends IdePlugin {
             }
         });
         addWorker(task, ECLIPSE_RESOURCE_ENCODING_TASK_NAME);
+        project.getPlugins().withType(JavaPlugin.class, new Action<JavaPlugin>() {
+            @Override
+            public void execute(JavaPlugin javaPlugin) {
+                //if (hasWarOrEarPlugin(project)) {
+                //    return;
+                //}
+                // final Properties defaultEncodings = new Properties();
+                // //String encoding = System.getProperty("file.encoding");
+                // String encoding = project.getProviders().systemProperty("file.encoding").getOrElse("UTF-7");
+                // // String encoding = project.getProviders().systemProperty("file.encoding").forUseAtConfigurationTime().getOrElse("UTF-8");
+                // //String encoding = project.getProviders().systemProperty("file.encoding").forUseAtConfigurationTime().getOrElse(System.getProperty("file.encoding"));
+                // defaultEncodings.setProperty("encoding/<project>", encoding);
+        
+                ((IConventionAware) eclipseModel.getEncoding()).getConventionMapping().map("defaultEncodings", new Callable<Map<String, String>>() {
+                    @Override
+                    public Map<String, String> call() throws Exception {
+                        final Map<String, String> defaultEncodings = new LinkedHashMap<>();
+                        String encoding = project.getProviders().systemProperty("file.encoding").getOrElse(System.getProperty("file.encoding"));
+                        //String encoding = project.getProviders().systemProperty("file.encoding").forUseAtConfigurationTime().getOrElse(System.getProperty("file.encoding"));
+                        defaultEncodings.put("encoding/<project>", encoding);
+                        if (project.getPlugins().hasPlugin(JavaPlugin.class)) {
+                            //project.getExtensions().getByType(JavaPluginExtension.class)
+                            for(SourceSet s : (SourceSetContainer)(project.findProperty("sourceSets"))) {
+                                String compiler = s.getCompileTaskName​("java");
+                                JavaCompile t = (JavaCompile)project.getTasks().findByName(compiler);
+                                if (t != null) {
+                                    encoding = t.getOptions().getEncoding();
+                                    if (encoding != null){
+                                        for( File d : s.getJava().getSrcDirs()){
+                                            defaultEncodings.put("encoding//"+project.relativePath(d).replaceFirst("/*$", ""),  encoding);
+                                        }
+                                    }
+                                }
+                            }
+                        } 
+                        return defaultEncodings;      
+                    }
+                });
+            }
+
+        });
     }
 
     private static String eclipseJavaRuntimeNameFor(JavaVersion version) {

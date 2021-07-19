@@ -30,6 +30,7 @@ import org.junit.Rule
 import org.junit.Test
 import spock.lang.Issue
 
+import java.util.Properties
 import java.util.regex.Pattern
 
 class EclipseIntegrationTest extends AbstractEclipseIntegrationTest {

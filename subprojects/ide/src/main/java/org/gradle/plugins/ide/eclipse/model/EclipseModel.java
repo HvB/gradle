@@ -21,12 +21,10 @@ import groovy.lang.Closure;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.PropertiesTransformer;
 import org.gradle.api.internal.tasks.DefaultTaskDependency;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.TaskDependency;
 import org.gradle.internal.xml.XmlTransformer;
-import org.gradle.plugins.ide.api.PropertiesFileContentMerger;
 import org.gradle.plugins.ide.api.XmlFileContentMerger;
 
 
@@ -188,9 +186,6 @@ public class EclipseModel {
     }
 
     public EclipseResourceEncoding getEncoding(){
-        if (encoding == null) {
-            encoding = getObjectFactory().newInstance(EclipseResourceEncoding.class, new PropertiesFileContentMerger(new PropertiesTransformer()));
-        }
         return encoding;
     }
 
