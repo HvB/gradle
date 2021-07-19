@@ -66,6 +66,7 @@ import org.gradle.plugins.ide.internal.configurer.UniqueProjectNameProvider;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.net.URI;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -411,7 +412,10 @@ public class EclipsePlugin extends IdePlugin {
                                     encoding = t.getOptions().getEncoding();
                                     if (encoding != null){
                                         for( File d : s.getJava().getSrcDirs()){
-                                            defaultEncodings.put("encoding//"+project.relativePath(d).replaceFirst("/*$", ""),  encoding);
+                                            URI path = project.getProjectDir().toURI().relativize(d.toURI());
+                                            defaultEncodings.put("encoding//"+path.toString().replaceFirst("/*$", ""),  encoding);
+                                            // pb because relativePath is system dependent (so a/b/c on linux and a\b\b on windows)
+                                            //defaultEncodings.put("encoding//"+project.relativePath(d).replaceFirst("/*$", ""),  encoding);
                                         }
                                     }
                                 }
